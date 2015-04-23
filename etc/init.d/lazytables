@@ -1,0 +1,87 @@
+#!/bin/bash
+#
+# LazyTables 0.7 - IPTables control script.
+#
+
+### BEGIN INIT INFO
+# Provides:             lazytables
+# Required-Start:       
+# Required-Stop:        
+# Default-Start:        2 3 4 5
+# Default-Stop:         0 1 6
+# Short-Description:    IPTables control script
+### END INIT INFO
+
+# Global vars
+IPTABLES="/sbin/iptables"
+CONF_DIR="/etc/lazytables"
+CONF_FILE="${CONF_DIR}/lazytables.conf"
+RULES_DIR="${CONF_DIR}/rules.d"
+CONFIG=$(grep -v ^# "${CONF_FILE}" | grep .)
+CONFIG_LC="$(echo "${CONFIG}" | wc -l)"
+CONFIG_CL_NUM=1
+
+
+# Functions
+preexec()
+{
+    ${IPTABLES} -P OUTPUT ACCEPT
+    ${IPTABLES} -F
+    ${IPTABLES} -t nat -F
+    ${IPTABLES} -t mangle -F
+}
+
+start()
+{
+    preexec
+
+    # Presetting some defaults
+    ${IPTABLES} -P INPUT DROP
+    ${IPTABLES} -P FORWARD DROP
+
+    ${IPTABLES} -A INPUT -i lo -j ACCEPT
+    ${IPTABLES} -A INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
+    ${IPTABLES} -A FORWARD -m state --state ESTABLISHED,RELATED -j ACCEPT
+
+    # Allow SSH (for the greater good, to not lock this host with empty ruleset!)
+    ${IPTABLES} -A INPUT -p tcp --dport ssh -j ACCEPT
+
+    # Building main rulesets
+    while [ ${CONFIG_CL_NUM} -le ${CONFIG_LC} ]
+    do
+	CONFIG_CL="$(echo "${CONFIG}" | head -n ${CONFIG_CL_NUM} | tail -n 1)"
+
+        CONFIG_CL_DATA=$(echo "${CONFIG_CL}" | awk -F"|" '{print $1}')
+        CONFIG_CL_ACTION=$(echo "${CONFIG_CL}" | awk -F"|" '{print $2}' | sed 's/\$/\"\$/g;s/\@/\"/g')
+
+        CONFIG_DATA_FILE="${RULES_DIR}/${CONFIG_CL_DATA}"
+	echo "${CONFIG_CL_DATA}"
+	echo "grep -v ^# ${CONFIG_DATA_FILE} | grep . | awk '{print \"${IPTABLES} ${CONFIG_CL_ACTION}\"}'" | bash | bash
+    
+        let CONFIG_CL_NUM++
+    done
+}
+
+stop()
+{
+    preexec
+
+    # Presetting some defaults
+    ${IPTABLES} -P INPUT ACCEPT
+    ${IPTABLES} -P FORWARD ACCEPT
+}
+
+restart()
+{
+    stop
+    start
+}
+
+
+# Core action
+case $1 in
+    start)start;;
+    stop)stop;;
+    restart|reload)restart;;
+    *)echo "Usage: $0 start|stop|restart|reload";;
+esac
