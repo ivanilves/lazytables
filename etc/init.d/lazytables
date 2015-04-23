@@ -43,9 +43,6 @@ start()
     ${IPTABLES} -A INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
     ${IPTABLES} -A FORWARD -m state --state ESTABLISHED,RELATED -j ACCEPT
 
-    # Allow SSH (for the greater good, to not lock this host with empty ruleset!)
-    ${IPTABLES} -A INPUT -p tcp --dport ssh -j ACCEPT
-
     # Building main rulesets
     while [ ${CONFIG_CL_NUM} -le ${CONFIG_LC} ]
     do
@@ -60,6 +57,9 @@ start()
     
         let CONFIG_CL_NUM++
     done
+
+    # Allow SSH (for the greater good, to not lock this host with empty ruleset!)
+    ${IPTABLES} -A INPUT -p tcp --dport ssh -j ACCEPT
 }
 
 stop()
