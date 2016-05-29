@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 WORKING_PATH=$(dirname $0)
 
 if [ ${UID} -ne 0 ]; then
