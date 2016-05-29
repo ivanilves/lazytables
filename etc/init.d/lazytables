@@ -59,7 +59,7 @@ start()
     done
 
     # Allow SSH (for the greater good, to not lock this host with empty ruleset!)
-    ${IPTABLES} -A INPUT -p tcp --dport ssh -j ACCEPT
+    ${IPTABLES} -I INPUT -p tcp --dport ssh -j ACCEPT
 }
 
 stop()
